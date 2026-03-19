@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>送迎配車表</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+:root {
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--border:#e0ddd5;
+  --text:#1a1917;--text2:#6b6860;--text3:#9c9a94;
+  --accent:#2d5a3d;--maru-bg:#e6f4ec;--maru-text:#1a6b35;--maru-border:#7dc49a;
+  --batu-bg:#fcecea;--batu-text:#8b2020;--batu-border:#e8958f;
+  --my-bg:#f0f4ff;--weekend:#faf9f6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;width:340px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem;}
+.login-logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;}
+.login-logo-text{font-size:16px;font-weight:700;}
+.login-logo-sub{font-size:11px;color:var(--text3);}
+.form-group{margin-bottom:1rem;}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;}
+.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;}
+.form-group input:focus{border-color:var(--accent);}
+#login-btn{width:100%;padding:11px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;margin-top:0.5rem;}
+#login-btn:hover{opacity:0.88;}
+#login-error{font-size:12px;color:var(--batu-text);margin-top:8px;min-height:18px;text-align:center;}
+.login-hint{margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.8;}
+
+/* HEADER */
+#main-screen{display:none;}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-icon{width:30px;height:30px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:15px;}
+.header-title{font-size:15px;font-weight:700;}
+.header-right{display:flex;align-items:center;gap:10px;}
+#user-badge{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;}
+#logout-btn{font-size:12px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit;}
+#logout-btn:hover{background:var(--surface2);}
+
+/* MAIN */
+.main{padding:1.5rem;}
+.tabs-wrap{display:flex;gap:6px;margin-bottom:1.5rem;overflow-x:auto;}
+.tab{font-size:13px;font-family:inherit;padding:6px 16px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text2);cursor:pointer;white-space:nowrap;}
+.tab.active{background:var(--accent);color:white;border-color:transparent;font-weight:500;}
+.tab:hover:not(.active){background:var(--surface2);}
+.info-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;}
+.info-text{font-size:13px;color:var(--text2);}
+.legend{display:flex;gap:12px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);}
+.legend-dot{width:16px;height:16px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.legend-dot.maru{background:var(--maru-bg);color:var(--maru-text);}
+.legend-dot.batu{background:var(--batu-bg);color:var(--batu-text);}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--surface2);font-size:11px;font-weight:500;color:var(--text2);padding:6px 4px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;white-space:nowrap;}
+thead th.name-th{text-align:left;padding-left:14px;min-width:88px;position:sticky;left:0;background:var(--surface2);z-index:2;}
+thead th.sat{color:#3060a0;}thead th.sun{color:#a03030;}
+thead tr:last-child th{border-bottom:2px solid var(--border);}
+tbody tr:hover{background:var(--surface2);}
+tbody tr.my-row{background:var(--my-bg);}
+tbody tr.my-row:hover{background:#e8edfc;}
+tbody td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:3px;text-align:center;vertical-align:middle;}
+tbody td.name-td{text-align:left;padding-left:14px;font-size:13px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:inherit;z-index:1;border-right:2px solid var(--border);}
+tbody tr.my-row td.name-td{background:var(--my-bg);}
+tbody tr:hover td.name-td{background:var(--surface2);}
+tbody tr.my-row:hover td.name-td{background:#e8edfc;}
+tbody td.weekend{background:var(--weekend);}
+
+/* MARK */
+.mark-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:24px;border-radius:5px;border:1px solid var(--border);background:none;font-size:13px;font-weight:700;font-family:inherit;transition:all 0.1s;}
+.mark-btn.editable{cursor:pointer;}
+.mark-btn.editable:hover{transform:scale(1.1);}
+.mark-btn.maru{background:var(--maru-bg);color:var(--maru-text);border-color:var(--maru-border);}
+.mark-btn.batu{background:var(--batu-bg);color:var(--batu-text);border-color:var(--batu-border);}
+.mark-btn.empty{color:var(--text3);}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1917;color:white;padding:9px 18px;border-radius:20px;font-size:13px;z-index:300;opacity:0;transition:opacity 0.2s;pointer-events:none;}
+.toast.show{opacity:1;}
+
+/* CONFIG NOTE */
+.config-note{background:#fff8e6;border:1px solid #f0d080;border-radius:8px;padding:10px 14px;font-size:12px;color:#7a5500;margin-bottom:1rem;}
+.config-note a{color:var(--accent);cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<!-- ===== 設定（ここを編集） ===== -->
+<script>
+var SUPABASE_URL = 'YOUR_SUPABASE_URL';
+var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+var USERS = [
+  { id: 'ando',     name: '安藤健二',  pw: '1234' },
+  { id: 'suzuki',   name: '鈴木太郎',  pw: '1234' },
+  { id: 'tanaka',   name: '田中次郎',  pw: '1234' },
+  { id: 'nakamura', name: '中村花子',  pw: '1234' },
+  { id: 'yamamoto', name: '山本一郎',  pw: '1234' },
+];
+</script>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🚐</div>
+      <div>
+        <div class="login-logo-text">送迎配車表</div>
+        <div class="login-logo-sub">Shuttle Schedule</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>ユーザーID</label>
+      <input type="text" id="login-id" placeholder="例：ando" />
+    </div>
+    <div class="form-group">
+      <label>パスワード</label>
+      <input type="password" id="login-pw" placeholder="••••••" />
+    </div>
+    <button id="login-btn">ログイン</button>
+    <div id="login-error"></div>
+    <div class="login-hint">デモ用アカウント（パスワード：1234）<br>ando / suzuki / tanaka / nakamura / yamamoto</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main-screen">
+  <header class="header">
+    <div class="header-left">
+      <div class="header-icon">🚐</div>
+      <div class="header-title">送迎配車表</div>
+    </div>
+    <div class="header-right">
+      <div id="user-badge"></div>
+      <button id="logout-btn">ログアウト</button>
+    </div>
+  </header>
+  <div class="main">
+    <div id="config-note" class="config-note" style="display:none;">
+      ⚠️ Supabaseの設定がまだです。index.html の SUPABASE_URL と SUPABASE_ANON_KEY を書き換えてください。
+    </div>
+    <div class="tabs-wrap" id="tabs-wrap"></div>
+    <div class="info-bar">
+      <div class="info-text" id="info-text"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot maru">○</div>乗車あり</div>
+        <div class="legend-item"><div class="legend-dot batu">×</div>乗車なし</div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-scroll">
+        <table id="main-table"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var currentUser = null;
+var currentYear = new Date().getFullYear();
+var currentMonth = new Date().getMonth();
+var sbClient = null;
+var localData = {};
+
+function initSb() {
+  var url = localStorage.getItem('sb_url') || SUPABASE_URL;
+  var key = localStorage.getItem('sb_key') || SUPABASE_ANON_KEY;
+  if (url !== 'YOUR_SUPABASE_URL') {
+    try { sbClient = window.supabase.createClient(url, key); } catch(e) {}
+  }
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+function doLogin() {
+  var id = document.getElementById('login-id').value.trim();
+  var pw = document.getElementById('login-pw').value;
+  var user = null;
+  for (var i = 0; i < USERS.length; i++) {
+    if (USERS[i].id === id && USERS[i].pw === pw) { user = USERS[i]; break; }
+  }
+  if (!user) {
+    document.getElementById('login-error').textContent = 'IDまたはパスワードが正しくありません';
+    return;
+  }
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  document.getElementById('user-badge').textContent = currentUser.name;
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL' && !localStorage.getItem('sb_url')) {
+    document.getElementById('config-note').style.display = 'block';
+  }
+  buildTabs();
+  renderTable();
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+function buildTabs() {
+  var wrap = document.getElementById('tabs-wrap');
+  wrap.innerHTML = '';
+  var now = new Date();
+  for (var i = -1; i <= 3; i++) {
+    var m = now.getMonth() + i;
+    var y = now.getFullYear();
+    while (m < 0) { m += 12; y--; }
+    while (m > 11) { m -= 12; y++; }
+    (function(month, year) {
+      var tab = document.createElement('button');
+      tab.className = 'tab' + (month === currentMonth && year === currentYear ? ' active' : '');
+      tab.textContent = year + '年' + (month+1) + '月';
+      tab.onclick = function() { currentMonth = month; currentYear = year; buildTabs(); renderTable(); };
+      wrap.appendChild(tab);
+    })(m, y);
+  }
+}
+
+function getVal(uid, d, slot) {
+  return localData[uid + '_' + d + '_' + slot];
+}
+
+function renderTable() {
+  var year = currentYear, month = currentMonth;
+  var days = new Date(year, month+1, 0).getDate();
+  var DOW = ['日','月','火','水','木','金','土'];
+  document.getElementById('info-text').textContent =
+    year + '年' + (month+1) + '月 ／ 自分の行（青背景）のみ編集できます';
+
+  if (sbClient) {
+    sbClient.from('haisha').select('user_id,day,slot,value')
+      .eq('year', year).eq('month', month)
+      .then(function(res) {
+        localData = {};
+        if (res.data) {
+          res.data.forEach(function(r) {
+            localData[r.user_id + '_' + r.day + '_' + r.slot] = r.value;
+          });
+        }
+        drawTable(year, month, days, DOW);
+      });
+  } else {
+    drawTable(year, month, days, DOW);
+  }
+}
+
+function drawTable(year, month, days, DOW) {
+  var html = '<thead><tr><th class="name-th">氏名</th>';
+  for (var d = 1; d <= days; d++) {
+    var dow = new Date(year, month, d).getDay();
+    var cls = dow===6?'sat':dow===0?'sun':'';
+    html += '<th colspan="2" class="' + cls + '">' + d + '<br><span style="font-size:10px;">' + DOW[dow] + '</span></th>';
+  }
+  html += '</tr><tr><th class="name-th"></th>';
+  for (var d = 1; d <= days; d++) html += '<th>朝</th><th>夕</th>';
+  html += '</tr></thead><tbody>';
+
+  for (var u = 0; u < USERS.length; u++) {
+    var user = USERS[u];
+    var isMe = user.id === currentUser.id;
+    html += '<tr class="' + (isMe?'my-row':'') + '">';
+    html += '<td class="name-td">' + (isMe?'▶ ':'') + user.name + '</td>';
+    for (var d = 1; d <= days; d++) {
+      var dow = new Date(year, month, d).getDay();
+      var isWe = dow===0||dow===6;
+      var wc = isWe?' weekend':'';
+      var slots = ['am','pm'];
+      for (var s = 0; s < slots.length; s++) {
+        var slot = slots[s];
+        var val = getVal(user.id, d, slot);
+        var mc = val===1?'maru':val===0?'batu':'empty';
+        var lbl = val===1?'○':val===0?'×':'－';
+        var ed = isMe?' editable':'';
+        var oc = isMe?' data-uid="'+user.id+'" data-d="'+d+'" data-slot="'+slot+'" data-y="'+year+'" data-m="'+month+'"':'';
+        html += '<td class="'+wc+'"><button class="mark-btn '+mc+ed+'"'+oc+'>'+lbl+'</button></td>';
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById('main-table').innerHTML = html;
+
+  document.querySelectorAll('.mark-btn.editable').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var uid = this.getAttribute('data-uid');
+      var d = parseInt(this.getAttribute('data-d'));
+      var slot = this.getAttribute('data-slot');
+      var y = parseInt(this.getAttribute('data-y'));
+      var m = parseInt(this.getAttribute('data-m'));
+      var cur = this.classList.contains('maru')?1:this.classList.contains('batu')?0:null;
+      var next = cur===null?1:cur===1?0:null;
+      var key = uid+'_'+d+'_'+slot;
+      if (next===null) delete localData[key]; else localData[key]=next;
+      this.classList.remove('maru','batu','empty');
+      if (next===1){this.classList.add('maru');this.textContent='○';}
+      else if(next===0){this.classList.add('batu');this.textContent='×';}
+      else{this.classList.add('empty');this.textContent='－';}
+      if (sbClient) {
+        if (next===null) {
+          sbClient.from('haisha').delete()
+            .eq('user_id',uid).eq('year',y).eq('month',m).eq('day',d).eq('slot',slot)
+            .then(function(){ showToast('保存しました'); });
+        } else {
+          sbClient.from('haisha').upsert({user_id:uid,year:y,month:m,day:d,slot:slot,value:next},{onConflict:'user_id,year,month,day,slot'})
+            .then(function(){ showToast('保存しました'); });
+        }
+      } else {
+        showToast('※ Supabase未設定のためローカル保存のみ');
+      }
+    });
+  });
+}
+
+// イベント登録
+document.getElementById('login-btn').onclick = doLogin;
+document.getElementById('logout-btn').onclick = doLogout;
+document.getElementById('login-pw').onkeydown = function(e){ if(e.key==='Enter') doLogin(); };
+document.getElementById('login-id').onkeydown = function(e){ if(e.key==='Enter') doLogin(); };
+
+initSb();
+</script>
+</body>
+</html>
